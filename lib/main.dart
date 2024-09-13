@@ -6,10 +6,12 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: const MyHomePage(),
+    return const MaterialApp(
+      home: MyHomePage(),
     );
   }
 }
@@ -52,7 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Colors.white,
         title: Stack(
           children: [
-            Center(
+            const Center(
               child: Text(
                 'To-Do List',
                 style: TextStyle(
@@ -66,20 +68,20 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: PopupMenuButton<String>(
                   onSelected: (value) {},
                   itemBuilder: (BuildContext context) => [
-                    PopupMenuItem<String>(
+                    const PopupMenuItem<String>(
                       value: 'all',
                       child: Text('All'),
                     ),
-                    PopupMenuItem<String>(
+                    const PopupMenuItem<String>(
                       value: 'done',
                       child: Text('Done'),
                     ),
-                    PopupMenuItem<String>(
+                    const PopupMenuItem<String>(
                       value: 'undone',
                       child: Text('Undone'),
                     ),
                   ],
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.menu,
                     size: 50,
                   ),
@@ -113,25 +115,25 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                       child: Center(
                         child: aktivitet.isCompleted
-                            ? Icon(
+                            ? const Icon(
                                 Icons.check,
                                 color: Colors.white,
                                 size: 24,
                               )
-                            : SizedBox.shrink(),
+                            : const SizedBox.shrink(),
                       ),
                     ),
-                    SizedBox(width: 10),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             aktivitet.syssla,
-                            style: TextStyle(fontSize: 25),
+                            style: const TextStyle(fontSize: 25),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.only(right: 20),
+                          const Padding(
+                            padding: EdgeInsets.only(right: 20),
                             child: Icon(
                               Icons.close,
                               color: Colors.black,
@@ -143,7 +145,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ],
                 ),
-                SizedBox(height: 30),
+                const SizedBox(height: 30),
               ],
             );
           },
@@ -156,10 +158,10 @@ class _MyHomePageState extends State<MyHomePage> {
             MaterialPageRoute(builder: (context) => AddTaskPage()),
           );
         },
-        child: Icon(Icons.add),
         tooltip: 'Lägg till uppgift',
         backgroundColor: const Color.fromARGB(255, 33, 150, 243),
         foregroundColor: Colors.white,
+        child: Icon(Icons.add),
       ),
     );
   }

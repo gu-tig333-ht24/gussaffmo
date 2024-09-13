@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 class AddTaskPage extends StatelessWidget {
+  const AddTaskPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'To-Do List',
           style: TextStyle(
             fontSize: 40,
@@ -20,7 +22,7 @@ class AddTaskPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              TextField(
+              const TextField(
                 decoration: InputDecoration(
                   hintText: 'Lägg till uppgift',
                   fillColor: Colors.white,
@@ -34,15 +36,15 @@ class AddTaskPage extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Container(
-                padding: EdgeInsets.all(25),
+                padding: const EdgeInsets.all(25),
                 decoration: BoxDecoration(
                   color: Colors.blue,
                   border: Border.all(color: Colors.black),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.add,
                   color: Colors.white,
                   size: 25,
