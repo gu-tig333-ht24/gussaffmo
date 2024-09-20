@@ -28,7 +28,7 @@ class AddTaskPage extends StatelessWidget {
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderSide:
-                        BorderSide(color: Colors.black, width: 2), // Svart kant
+                        BorderSide(color: Colors.black, width: 2), 
                   ),
                   hintStyle: TextStyle(
                     color: Colors.black,
