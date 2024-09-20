@@ -1,7 +1,21 @@
 import 'package:flutter/material.dart';
 
-class AddTaskPage extends StatelessWidget {
+class AddTaskPage extends StatefulWidget {
   const AddTaskPage({super.key});
+
+  @override
+  _AddTaskPageState createState() => _AddTaskPageState();
+}
+
+class _AddTaskPageState extends State<AddTaskPage> {
+  final TextEditingController _controller = TextEditingController();
+
+  void _addTask() {
+    String newTask = _controller.text;
+    if (newTask.isNotEmpty) {
+      Navigator.pop(context, newTask);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -9,50 +23,55 @@ class AddTaskPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'To-Do List',
-          style: TextStyle(
-            fontSize: 40,
-          ),
+          style: TextStyle(fontSize: 40),
         ),
         backgroundColor: Colors.white,
       ),
       backgroundColor: Colors.white,
-      body: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const TextField(
-                decoration: InputDecoration(
-                  hintText: 'Lägg till uppgift',
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderSide:
-                        BorderSide(color: Colors.black, width: 2), // Svart kant
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _controller,
+                  decoration: const InputDecoration(
+                    hintText: 'Add task',
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Colors.grey,
+                      ),
+                    ),
+                    hintStyle: TextStyle(color: Colors.grey, fontSize: 20),
                   ),
-                  hintStyle: TextStyle(
-                    color: Colors.black,
-                    fontSize: 20,
-                  ),
+                  onSubmitted: (value) {
+                    _addTask();
+                  },
                 ),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(25),
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  border: Border.all(color: Colors.black),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 25,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          Positioned(
+              top: 80,
+              child: FloatingActionButton.extended(
+                onPressed: _addTask,
+                backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+                icon: const Icon(
+                  Icons.add,
+                  color: Color.fromARGB(255, 0, 0, 0),
+                ),
+                label: const Text(
+                  'ADD',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color.fromARGB(255, 0, 0, 0),
+                  ),
+                ),
+              )),
+        ],
       ),
     );
   }

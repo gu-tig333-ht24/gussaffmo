@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'ny_uppgift.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   runApp(MyApp());
@@ -18,7 +19,7 @@ class MyApp extends StatelessWidget {
 
 class Aktivitet {
   final String syssla;
-  final bool isCompleted;
+  bool isCompleted;
 
   Aktivitet(this.syssla, this.isCompleted);
 }
@@ -31,72 +32,62 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<Aktivitet> aktiviteter = [
-    Aktivitet('Städa rum', true),
-    Aktivitet('Äta mat', false),
-    Aktivitet('Träna', true),
-    Aktivitet('Läsa bok', false),
-    Aktivitet('Träffa kungen', false),
-    Aktivitet('Tvätta kläder', false),
-    Aktivitet('Städa badrum', false),
-    Aktivitet('Bli biljonär', false),
-    Aktivitet('Laga mat', false),
-    Aktivitet('Gå på bio', false),
-    Aktivitet('Hoppa fallskärm', false),
-    Aktivitet('Besöka en vän', false),
-  ];
+  List<Aktivitet> aktiviteter = [];
+  String filter = 'all'; // För att hålla koll på valt filter
+
+  // Metod för att filtrera aktiviteter baserat på filtret
+  List<Aktivitet> _filteredTasks() {
+    if (filter == 'done') {
+      return aktiviteter.where((aktivitet) => aktivitet.isCompleted).toList();
+    } else if (filter == 'undone') {
+      return aktiviteter.where((aktivitet) => !aktivitet.isCompleted).toList();
+    }
+    return aktiviteter; // Returnera alla uppgifter om filter är 'all'
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: Stack(
-          children: [
-            const Center(
-              child: Text(
-                'To-Do List',
-                style: TextStyle(
-                  fontSize: 40,
-                ),
-              ),
-            ),
-            Positioned(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: PopupMenuButton<String>(
-                  onSelected: (value) {},
-                  itemBuilder: (BuildContext context) => [
-                    const PopupMenuItem<String>(
-                      value: 'all',
-                      child: Text('All'),
-                    ),
-                    const PopupMenuItem<String>(
-                      value: 'done',
-                      child: Text('Done'),
-                    ),
-                    const PopupMenuItem<String>(
-                      value: 'undone',
-                      child: Text('Undone'),
-                    ),
-                  ],
-                  icon: const Icon(
-                    Icons.menu,
-                    size: 50,
-                  ),
-                ),
-              ),
-            ),
-          ],
+        title: const Text(
+          'To-Do List',
+          style: TextStyle(fontSize: 40),
+          textAlign: TextAlign.center,
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: PopupMenuButton<String>(
+              onSelected: (value) {
+                setState(() {
+                  filter = value; // Uppdatera filtret baserat på valet
+                });
+              },
+              itemBuilder: (BuildContext context) {
+                return ['All', 'Done', 'Undone'].map((String choice) {
+                  return PopupMenuItem<String>(
+                    value: choice.toLowerCase(),
+                    child: Text(choice),
+                  );
+                }).toList();
+              },
+              icon: const Icon(
+                Icons.menu,
+                size: 35,
+              ),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.only(left: 18, top: 15),
         child: ListView.builder(
-          itemCount: aktiviteter.length,
+          itemCount: _filteredTasks().length, // Använd filtrerade uppgifter
           itemBuilder: (context, index) {
-            final aktivitet = aktiviteter[index];
+            final aktivitet =
+                _filteredTasks()[index]; // Använd filtrerade uppgifter
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -104,23 +95,31 @@ class _MyHomePageState extends State<MyHomePage> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color:
-                            aktivitet.isCompleted ? Colors.blue : Colors.white,
-                        border: Border.all(color: Colors.black),
-                      ),
-                      child: Center(
-                        child: aktivitet.isCompleted
-                            ? const Icon(
-                                Icons.check,
-                                color: Colors.white,
-                                size: 24,
-                              )
-                            : const SizedBox.shrink(),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          aktivitet.isCompleted = !aktivitet.isCompleted;
+                        });
+                      },
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: aktivitet.isCompleted
+                              ? Colors.blue
+                              : Colors.white,
+                          border: Border.all(color: Colors.black),
+                        ),
+                        child: Center(
+                          child: aktivitet.isCompleted
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 24,
+                                )
+                              : const SizedBox.shrink(),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -130,16 +129,31 @@ class _MyHomePageState extends State<MyHomePage> {
                         children: [
                           Text(
                             aktivitet.syssla,
-                            style: const TextStyle(fontSize: 25),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.only(right: 20),
-                            child: Icon(
-                              Icons.close,
-                              color: Colors.black,
-                              size: 30,
+                            style: TextStyle(
+                              fontSize: 25,
+                              decoration: aktivitet.isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : TextDecoration.none,
+                              color: aktivitet.isCompleted
+                                  ? Colors.grey
+                                  : Colors.black,
                             ),
-                          )
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 20),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.close,
+                                color: Colors.black,
+                                size: 30,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  aktiviteter.removeAt(index);
+                                });
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -152,16 +166,22 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final newTask = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => AddTaskPage()),
+            MaterialPageRoute(builder: (context) => const AddTaskPage()),
           );
+
+          if (newTask != null && newTask.isNotEmpty) {
+            setState(() {
+              aktiviteter.add(Aktivitet(newTask, false));
+            });
+          }
         },
         tooltip: 'Lägg till uppgift',
         backgroundColor: const Color.fromARGB(255, 33, 150, 243),
         foregroundColor: Colors.white,
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
       ),
     );
   }
