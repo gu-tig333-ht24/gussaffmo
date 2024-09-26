@@ -1,9 +1,37 @@
 import 'package:flutter/material.dart';
 import 'ny_uppgift.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+
+class TaskProvider extends ChangeNotifier {
+  final List<Aktivitet> _aktiviteter = [];
+
+  List<Aktivitet> get aktiviteter => _aktiviteter;
+
+  void addAktivitet(String syssla) {
+    _aktiviteter.add(Aktivitet(syssla, false));
+    notifyListeners();
+  }
+
+  void toggleComplete(int index) {
+    _aktiviteter[index].isCompleted = !_aktiviteter[index].isCompleted;
+    notifyListeners();
+  }
+
+  void removeAktivitet(int index) {
+    _aktiviteter.removeAt(index);
+    notifyListeners();
+  }
+}
 
 void main() {
-  runApp(MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => TaskProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -32,11 +60,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<Aktivitet> aktiviteter = [];
   String filter = 'all'; // För att hålla koll på valt filter
 
   // Metod för att filtrera aktiviteter baserat på filtret
-  List<Aktivitet> _filteredTasks() {
+  List<Aktivitet> _filteredTasks(List<Aktivitet> aktiviteter) {
     if (filter == 'done') {
       return aktiviteter.where((aktivitet) => aktivitet.isCompleted).toList();
     } else if (filter == 'undone') {
@@ -47,6 +74,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final taskProvider = context.watch<TaskProvider>();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -84,10 +113,10 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Padding(
         padding: const EdgeInsets.only(left: 18, top: 15),
         child: ListView.builder(
-          itemCount: _filteredTasks().length, // Använd filtrerade uppgifter
+          itemCount: _filteredTasks(taskProvider.aktiviteter)
+              .length, // Använd filtrerade uppgifter
           itemBuilder: (context, index) {
-            final aktivitet =
-                _filteredTasks()[index]; // Använd filtrerade uppgifter
+            final aktivitet = _filteredTasks(taskProvider.aktiviteter)[index];
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -97,9 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   children: [
                     GestureDetector(
                       onTap: () {
-                        setState(() {
-                          aktivitet.isCompleted = !aktivitet.isCompleted;
-                        });
+                        taskProvider.toggleComplete(index);
                       },
                       child: Container(
                         width: 30,
@@ -148,9 +175,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                 size: 30,
                               ),
                               onPressed: () {
-                                setState(() {
-                                  aktiviteter.removeAt(index);
-                                });
+                                taskProvider.removeAktivitet(index);
                               },
                             ),
                           ),
@@ -173,9 +198,7 @@ class _MyHomePageState extends State<MyHomePage> {
           );
 
           if (newTask != null && newTask.isNotEmpty) {
-            setState(() {
-              aktiviteter.add(Aktivitet(newTask, false));
-            });
+            taskProvider.addAktivitet(newTask);
           }
         },
         tooltip: 'Lägg till uppgift',
