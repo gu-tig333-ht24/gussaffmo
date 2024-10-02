@@ -1,15 +1,41 @@
 import 'package:flutter/material.dart';
-import 'ny_uppgift.dart';
+import 'new_task.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'api.dart'; // Importera din api-fil
 
-class TaskProvider extends ChangeNotifier {
-  final List<Aktivitet> _aktiviteter = [];
+// Modellen för varje aktivitet
+class Aktivitet {
+  final String syssla;
+  bool isCompleted;
 
-  List<Aktivitet> get aktiviteter => _aktiviteter;
+  Aktivitet(this.syssla, this.isCompleted);
+}
 
-  void addAktivitet(String syssla) {
+// Provider-klassen som hanterar listan av aktiviteter och filtrering
+class AktivitetProvider with ChangeNotifier {
+  List<Aktivitet> _aktiviteter = [];
+  String _filter = 'all';
+
+  List<Aktivitet> get aktiviteter => _filteredTasks();
+  String get filter => _filter;
+
+  void addTask(String syssla) async {
+    // Hämta API-nyckeln
+    String? apiKey = await getSavedApiKey();
+    if (apiKey == null) {
+      apiKey = await getApiKey();
+      await saveApiKey(apiKey);
+    }
+
+    // Skapa och lägg till uppgiften på servern
+    final newTodo = Todo(
+      syssla,
+      'false',
+    );
+
+    await addTodoToAPI(apiKey, newTodo);
+
+    // Uppdatera den lokala listan
     _aktiviteter.add(Aktivitet(syssla, false));
     notifyListeners();
   }
@@ -19,8 +45,40 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void removeAktivitet(int index) {
+  void removeTask(int index) {
     _aktiviteter.removeAt(index);
+    notifyListeners();
+  }
+
+  void setFilter(String newFilter) {
+    _filter = newFilter;
+    notifyListeners();
+  }
+
+  List<Aktivitet> _filteredTasks() {
+    if (_filter == 'done') {
+      return _aktiviteter.where((aktivitet) => aktivitet.isCompleted).toList();
+    } else if (_filter == 'undone') {
+      return _aktiviteter.where((aktivitet) => !aktivitet.isCompleted).toList();
+    }
+    return _aktiviteter;
+  }
+
+  Future<void> fetchTasks() async {
+    // Hämta API-nyckeln
+    String? apiKey = await getSavedApiKey();
+    if (apiKey == null) {
+      apiKey = await getApiKey();
+      await saveApiKey(apiKey);
+    }
+
+    // Hämta uppgifter från servern
+    final todos = await getTodos(apiKey);
+
+    // Uppdatera lokala listan
+    _aktiviteter = todos
+        .map((todo) => Aktivitet(todo.title, todo.done == 'true'))
+        .toList();
     notifyListeners();
   }
 }
@@ -28,7 +86,8 @@ class TaskProvider extends ChangeNotifier {
 void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (context) => TaskProvider(),
+      create: (context) =>
+          AktivitetProvider()..fetchTasks(), // Hämta uppgifter vid start
       child: const MyApp(),
     ),
   );
@@ -45,36 +104,12 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class Aktivitet {
-  final String syssla;
-  bool isCompleted;
-
-  Aktivitet(this.syssla, this.isCompleted);
-}
-
-class MyHomePage extends StatefulWidget {
+class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key});
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  String filter = 'all'; // För att hålla koll på valt filter
-
-  // Metod för att filtrera aktiviteter baserat på filtret
-  List<Aktivitet> _filteredTasks(List<Aktivitet> aktiviteter) {
-    if (filter == 'done') {
-      return aktiviteter.where((aktivitet) => aktivitet.isCompleted).toList();
-    } else if (filter == 'undone') {
-      return aktiviteter.where((aktivitet) => !aktivitet.isCompleted).toList();
-    }
-    return aktiviteter; // Returnera alla uppgifter om filter är 'all'
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final taskProvider = context.watch<TaskProvider>();
+    final aktivitetProvider = context.watch<AktivitetProvider>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -90,9 +125,7 @@ class _MyHomePageState extends State<MyHomePage> {
             padding: const EdgeInsets.only(right: 10),
             child: PopupMenuButton<String>(
               onSelected: (value) {
-                setState(() {
-                  filter = value; // Uppdatera filtret baserat på valet
-                });
+                context.read<AktivitetProvider>().setFilter(value);
               },
               itemBuilder: (BuildContext context) {
                 return ['All', 'Done', 'Undone'].map((String choice) {
@@ -113,10 +146,9 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Padding(
         padding: const EdgeInsets.only(left: 18, top: 15),
         child: ListView.builder(
-          itemCount: _filteredTasks(taskProvider.aktiviteter)
-              .length, // Använd filtrerade uppgifter
+          itemCount: aktivitetProvider.aktiviteter.length,
           itemBuilder: (context, index) {
-            final aktivitet = _filteredTasks(taskProvider.aktiviteter)[index];
+            final aktivitet = aktivitetProvider.aktiviteter[index];
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -126,7 +158,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   children: [
                     GestureDetector(
                       onTap: () {
-                        taskProvider.toggleComplete(index);
+                        context.read<AktivitetProvider>().toggleComplete(index);
                       },
                       child: Container(
                         width: 30,
@@ -175,7 +207,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                 size: 30,
                               ),
                               onPressed: () {
-                                taskProvider.removeAktivitet(index);
+                                context
+                                    .read<AktivitetProvider>()
+                                    .removeTask(index);
                               },
                             ),
                           ),
@@ -198,7 +232,7 @@ class _MyHomePageState extends State<MyHomePage> {
           );
 
           if (newTask != null && newTask.isNotEmpty) {
-            taskProvider.addAktivitet(newTask);
+            context.read<AktivitetProvider>().addTask(newTask);
           }
         },
         tooltip: 'Lägg till uppgift',
