@@ -119,7 +119,7 @@ Future<void> deleteTodoFromAPI(String apiKey, String title) async {
 
 Future<void> updateTodoInAPI(String apiKey, String title, String done) async {
   final response = await http.put(
-    Uri.parse('$ENDPOINT/todos?key=$apiKey'),
+    Uri.parse('$ENDPOINT/todos/$title?key=$apiKey'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'title': title,
