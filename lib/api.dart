@@ -105,3 +105,29 @@ Future<void> addTodoToAPI(String apiKey, Todo todo) async {
     throw Exception('Misslyckades med att lägga till uppgift');
   }
 }
+
+Future<void> deleteTodoFromAPI(String apiKey, String title) async {
+  final response = await http.delete(
+    Uri.parse('$ENDPOINT/todos/$title?key=$apiKey'),
+    headers: {'Content-Type': 'application/json'},
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception('Kunde inte ta bort uppgiften från servern');
+  }
+}
+
+Future<void> updateTodoInAPI(String apiKey, String title, String done) async {
+  final response = await http.put(
+    Uri.parse('$ENDPOINT/todos?key=$apiKey'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'title': title,
+      'done': done,
+    }),
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception('Kunde inte uppdatera uppgiften på servern');
+  }
+}

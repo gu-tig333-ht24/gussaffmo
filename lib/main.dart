@@ -40,12 +40,40 @@ class AktivitetProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleComplete(int index) {
+  void toggleComplete(int index) async {
+    // Hämta API-nyckeln
+    String? apiKey = await getSavedApiKey();
+    if (apiKey == null) {
+      apiKey = await getApiKey();
+      await saveApiKey(apiKey);
+    }
+
+    // Uppdatera lokalt först
     _aktiviteter[index].isCompleted = !_aktiviteter[index].isCompleted;
+
+    // Uppdatera i API:et
+    await updateTodoInAPI(
+      apiKey,
+      _aktiviteter[index].syssla,
+      _aktiviteter[index].isCompleted.toString(),
+    );
+
     notifyListeners();
   }
 
-  void removeTask(int index) {
+  void removeTask(int index) async {
+    // Hämta API-nyckeln
+    String? apiKey = await getSavedApiKey();
+    if (apiKey == null) {
+      apiKey = await getApiKey();
+      await saveApiKey(apiKey);
+    }
+
+    // Ta bort från API:et först
+    final taskToRemove = _aktiviteter[index];
+    await deleteTodoFromAPI(apiKey, taskToRemove.syssla);
+
+    // Ta sedan bort från den lokala listan
     _aktiviteter.removeAt(index);
     notifyListeners();
   }
