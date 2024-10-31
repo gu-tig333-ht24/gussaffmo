@@ -4,16 +4,21 @@ class AddTaskPage extends StatefulWidget {
   const AddTaskPage({super.key});
 
   @override
-  _AddTaskPageState createState() => _AddTaskPageState();
+  AddTaskPageState createState() => AddTaskPageState();
 }
 
-class _AddTaskPageState extends State<AddTaskPage> {
+class AddTaskPageState extends State<AddTaskPage> {
   final TextEditingController _controller = TextEditingController();
 
+  /// Adds the task if the input is valid
   void _addTask() {
     String newTask = _controller.text;
     if (newTask.isNotEmpty) {
       Navigator.pop(context, newTask);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task cannot be empty')),
+      );
     }
   }
 
