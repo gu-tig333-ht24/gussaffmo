@@ -1,121 +1,139 @@
 import 'package:flutter/material.dart';
 import 'new_task.dart';
 import 'package:provider/provider.dart';
-import 'api.dart'; // Importera din api-fil
+import 'api.dart'; // Import your API file
 
-// Modellen för varje aktivitet
-class Aktivitet {
-  final String syssla;
+/// Model for each task
+class Task {
+  final String? id;
+  final String title;
   bool isCompleted;
 
-  Aktivitet(this.syssla, this.isCompleted);
+  Task(this.title, this.isCompleted, {this.id});
 }
 
-// Provider-klassen som hanterar listan av aktiviteter och filtrering
-class AktivitetProvider with ChangeNotifier {
-  List<Aktivitet> _aktiviteter = [];
+/// Provider class - manages the list of tasks and filtering
+class TaskProvider with ChangeNotifier {
+  List<Task> _tasks = [];
   String _filter = 'all';
 
-  List<Aktivitet> get aktiviteter => _filteredTasks();
+  List<Task> get tasks => _filteredTasks();
   String get filter => _filter;
 
-  void addTask(String syssla) async {
-    // Hämta API-nyckeln
+  /// Add new task to the list and the API
+  Future<void> addTask(String title) async {
+    // Fetch the API key
     String? apiKey = await getSavedApiKey();
     if (apiKey == null) {
       apiKey = await getApiKey();
       await saveApiKey(apiKey);
     }
 
-    // Skapa och lägg till uppgiften på servern
+    // Create and add the task to the server without id
     final newTodo = Todo(
-      syssla,
-      'false',
+      title,
+      false.toString(), // Task starts as not done
     );
 
-    await addTodoToAPI(apiKey, newTodo);
-
-    // Uppdatera den lokala listan
-    _aktiviteter.add(Aktivitet(syssla, false));
-    notifyListeners();
+    try {
+      final addedTodo = await addTodoToAPI(apiKey, newTodo); // Fetch from API
+      _tasks.add(Task(addedTodo.title, addedTodo.done == 'true',
+          id: addedTodo.id)); // Add with ID received from server
+      notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to add task to the server.');
+    }
   }
 
-  void toggleComplete(int index) async {
-    // Hämta API-nyckeln
+  /// Toggles the completion status of a task and updates the server
+  Future<void> toggleComplete(int index) async {
+    _tasks[index].isCompleted = !_tasks[index].isCompleted;
+
+    // Fetch the API key
     String? apiKey = await getSavedApiKey();
     if (apiKey == null) {
       apiKey = await getApiKey();
       await saveApiKey(apiKey);
     }
 
-    // Uppdatera lokalt först
-    _aktiviteter[index].isCompleted = !_aktiviteter[index].isCompleted;
-
-    // Uppdatera i API:et
-    await updateTodoInAPI(
-      apiKey,
-      _aktiviteter[index].syssla,
-      _aktiviteter[index].isCompleted.toString(),
+    // Update the task on server
+    final todoToUpdate = Todo(
+      _tasks[index].title,
+      _tasks[index].isCompleted ? 'true' : 'false',
+      id: _tasks[index].id,
     );
 
-    notifyListeners();
+    try {
+      await updateTodoInAPI(apiKey, todoToUpdate);
+      notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to update task on the server.');
+    }
   }
 
-  void removeTask(int index) async {
-    // Hämta API-nyckeln
+  /// Removes task from the list and API
+  Future<void> removeTask(int index) async {
+    // Fetch the API key
     String? apiKey = await getSavedApiKey();
     if (apiKey == null) {
       apiKey = await getApiKey();
       await saveApiKey(apiKey);
     }
 
-    // Ta bort från API:et först
-    final taskToRemove = _aktiviteter[index];
-    await deleteTodoFromAPI(apiKey, taskToRemove.syssla);
+    final taskToRemove = _tasks[index];
 
-    // Ta sedan bort från den lokala listan
-    _aktiviteter.removeAt(index);
-    notifyListeners();
+    try {
+      await deleteTodoFromAPI(apiKey, taskToRemove.id!); // Remove using ID
+      _tasks.removeAt(index); // Remove locally
+      notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to delete task from the server.');
+    }
   }
 
+  /// Sets filter for the task list
   void setFilter(String newFilter) {
     _filter = newFilter;
     notifyListeners();
   }
 
-  List<Aktivitet> _filteredTasks() {
+  /// Filters tasks based on current filter
+  List<Task> _filteredTasks() {
     if (_filter == 'done') {
-      return _aktiviteter.where((aktivitet) => aktivitet.isCompleted).toList();
+      return _tasks.where((task) => task.isCompleted).toList();
     } else if (_filter == 'undone') {
-      return _aktiviteter.where((aktivitet) => !aktivitet.isCompleted).toList();
+      return _tasks.where((task) => !task.isCompleted).toList();
     }
-    return _aktiviteter;
+    return _tasks;
   }
 
+  /// Fetches tasks from the server and updates the local list
   Future<void> fetchTasks() async {
-    // Hämta API-nyckeln
+    // Fetch the API key
     String? apiKey = await getSavedApiKey();
     if (apiKey == null) {
       apiKey = await getApiKey();
       await saveApiKey(apiKey);
     }
 
-    // Hämta uppgifter från servern
-    final todos = await getTodos(apiKey);
+    try {
+      // Fetch tasks from the server
+      final todos = await getTodos(apiKey);
 
-    // Uppdatera lokala listan
-    _aktiviteter = todos
-        .map((todo) => Aktivitet(todo.title, todo.done == 'true'))
-        .toList();
-    notifyListeners();
+      _tasks = todos
+          .map((todo) => Task(todo.title, todo.done == 'true', id: todo.id))
+          .toList();
+      notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to fetch tasks from the server.');
+    }
   }
 }
 
 void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (context) =>
-          AktivitetProvider()..fetchTasks(), // Hämta uppgifter vid start
+      create: (context) => TaskProvider()..fetchTasks(), // Fetch tasks on start
       child: const MyApp(),
     ),
   );
@@ -137,7 +155,7 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aktivitetProvider = context.watch<AktivitetProvider>();
+    final taskProvider = context.watch<TaskProvider>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -153,7 +171,7 @@ class MyHomePage extends StatelessWidget {
             padding: const EdgeInsets.only(right: 10),
             child: PopupMenuButton<String>(
               onSelected: (value) {
-                context.read<AktivitetProvider>().setFilter(value);
+                context.read<TaskProvider>().setFilter(value);
               },
               itemBuilder: (BuildContext context) {
                 return ['All', 'Done', 'Undone'].map((String choice) {
@@ -174,9 +192,9 @@ class MyHomePage extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.only(left: 18, top: 15),
         child: ListView.builder(
-          itemCount: aktivitetProvider.aktiviteter.length,
+          itemCount: taskProvider.tasks.length,
           itemBuilder: (context, index) {
-            final aktivitet = aktivitetProvider.aktiviteter[index];
+            final task = taskProvider.tasks[index];
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -186,20 +204,18 @@ class MyHomePage extends StatelessWidget {
                   children: [
                     GestureDetector(
                       onTap: () {
-                        context.read<AktivitetProvider>().toggleComplete(index);
+                        context.read<TaskProvider>().toggleComplete(index);
                       },
                       child: Container(
                         width: 30,
                         height: 30,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: aktivitet.isCompleted
-                              ? Colors.blue
-                              : Colors.white,
+                          color: task.isCompleted ? Colors.blue : Colors.white,
                           border: Border.all(color: Colors.black),
                         ),
                         child: Center(
-                          child: aktivitet.isCompleted
+                          child: task.isCompleted
                               ? const Icon(
                                   Icons.check,
                                   color: Colors.white,
@@ -215,15 +231,14 @@ class MyHomePage extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            aktivitet.syssla,
+                            task.title,
                             style: TextStyle(
                               fontSize: 25,
-                              decoration: aktivitet.isCompleted
+                              decoration: task.isCompleted
                                   ? TextDecoration.lineThrough
                                   : TextDecoration.none,
-                              color: aktivitet.isCompleted
-                                  ? Colors.grey
-                                  : Colors.black,
+                              color:
+                                  task.isCompleted ? Colors.grey : Colors.black,
                             ),
                           ),
                           Padding(
@@ -235,9 +250,7 @@ class MyHomePage extends StatelessWidget {
                                 size: 30,
                               ),
                               onPressed: () {
-                                context
-                                    .read<AktivitetProvider>()
-                                    .removeTask(index);
+                                context.read<TaskProvider>().removeTask(index);
                               },
                             ),
                           ),
@@ -260,10 +273,10 @@ class MyHomePage extends StatelessWidget {
           );
 
           if (newTask != null && newTask.isNotEmpty) {
-            context.read<AktivitetProvider>().addTask(newTask);
+            context.read<TaskProvider>().addTask(newTask);
           }
         },
-        tooltip: 'Lägg till uppgift',
+        tooltip: 'Add Task',
         backgroundColor: const Color.fromARGB(255, 33, 150, 243),
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
