@@ -121,6 +121,6 @@ Future<void> deleteTodoFromAPI(String apiKey, String todoId) async {
   );
 
   if (response.statusCode != 200) {
-    throw Exception('Kunde inte ta bort todo');
+    throw Exception('Could not delete Todo');
   }
 }
